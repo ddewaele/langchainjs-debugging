@@ -99,6 +99,26 @@ async function main() {
 main().catch(console.error);
 ```
 
+### Project structure
+
+You'll see the following structure in your project folder 
+
+![img.png](docs/img.png)
+
+### Debugging in WebStorm
+
+We'll start by adding a breakpoint in our app
+
+![img_1.png](docs/img_1.png)
+
+Our breakpoint will be hit
+
+![img_2.png](docs/img_2.png)
+
+When debugging you'll notice that we'll often hit the typescript definition files instead of the actual source files.
+
+![img_3.png](docs/img_3.png)
+
 
 ## Debugging
 
@@ -113,30 +133,38 @@ If you don't do this you will get stacks like this that you cannot navigate.
 Upon closer inspection, you'll notice that the source files mentioned in this stack do not exist.
 
 ```
-Error: mime_type key is required for base64 data.
-    at convertToOpenAIImageBlock (/Users/davydewaele/Projects/Personal/langchain-tutorial/node_modules/@langchain/core/src/messages/content/data.ts:246:15)
-    at _formatForTracing (/Users/davydewaele/Projects/Personal/langchain-tutorial/node_modules/@langchain/core/src/language_models/chat_models.ts:172:17)
+TypeError: Cannot read properties of null (reading 'toChatMessages')
+    at <anonymous> (/Users/davydewaele/Projects/AgenticAI/langchainjs-debugging/node_modules/@langchain/core/src/language_models/chat_models.ts:852:19)
     at Array.map (<anonymous>)
-    at ChatOpenAI._generateUncached (/Users/davydewaele/Projects/Personal/langchain-tutorial/node_modules/@langchain/core/src/language_models/chat_models.ts:456:22)
-
-Node.js v20.17.0
-
-Process finished with exit code 1
-
+    at ChatOpenAI.generatePrompt (/Users/davydewaele/Projects/AgenticAI/langchainjs-debugging/node_modules/@langchain/core/src/language_models/chat_models.ts:851:58)
+    at ChatOpenAI.invoke (/Users/davydewaele/Projects/AgenticAI/langchainjs-debugging/node_modules/@langchain/core/src/language_models/chat_models.ts:278:31)
+    at ChatOpenAI.invoke (/Users/davydewaele/Projects/AgenticAI/langchainjs-debugging/node_modules/@langchain/openai/src/chat_models/base.ts:637:18)
+    at main (/Users/davydewaele/Projects/AgenticAI/langchainjs-debugging/src/main.ts:10:29)
+    at <anonymous> (/Users/davydewaele/Projects/AgenticAI/langchainjs-debugging/src/main.ts:15:1)
+    at ModuleJob.run (node:internal/modules/esm/module_job:262:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:482:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
 ```
 
 What you want is this. 
 
-Links that work to actual source code on your filesystem.
-
 ```
-Error: mime_type key is required for base64 data.
-    at convertToOpenAIImageBlock (/private/tmp/langchainjs/libs/langchain-core/src/messages/content/data.ts:246:15)
-    at _formatForTracing (/private/tmp/langchainjs/libs/langchain-core/src/language_models/chat_models.ts:172:17)
+TypeError: Cannot read properties of null (reading 'toChatMessages')
+    at <anonymous> (/Users/davydewaele/Projects/AgenticAI/langchainjs/libs/langchain-core/src/language_models/chat_models.ts:852:19)
     at Array.map (<anonymous>)
-    at ChatOpenAI._generateUncached (/private/tmp/langchainjs/libs/langchain-core/src/language_models/chat_models.ts:456:22)
-
+    at ChatOpenAI.generatePrompt (/Users/davydewaele/Projects/AgenticAI/langchainjs/libs/langchain-core/src/language_models/chat_models.ts:851:58)
+    at ChatOpenAI.invoke (/Users/davydewaele/Projects/AgenticAI/langchainjs/libs/langchain-core/src/language_models/chat_models.ts:278:31)
+    at ChatOpenAI.invoke (/Users/davydewaele/Projects/AgenticAI/langchainjs-debugging/node_modules/@langchain/openai/src/chat_models/base.ts:637:18)
+    at main (/Users/davydewaele/Projects/AgenticAI/langchainjs-debugging/src/main.ts:10:29)
+    at <anonymous> (/Users/davydewaele/Projects/AgenticAI/langchainjs-debugging/src/main.ts:15:1)
+    at ModuleJob.run (node:internal/modules/esm/module_job:262:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:482:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
 ```
+
+Links that work to actual source code on your filesystem. A subtle difference is that the sources are not installed in your node_modules folder, but they are pointing
+to the actual source files on your filesystem.
+
 
 So how do we do that ?
 
@@ -150,8 +178,12 @@ Clone the sources from the langchainjs repository :
 git clone https://github.com/langchain-ai/langchainjs
 ```
 
-Just make sure they are somewhere on your filesystem. The don't need to be in the same folder as your project.
-We will link the sources to our typescript folder later on
+Just make sure they are somewhere on your filesystem. They don't need to be in the same folder as your project.
+
+In the sources folder we will need to execute the following commands :
+
+- `pnpm build` to build the project
+- `pnpm link --global` to link the project globally
 
 
 ### Global linking
@@ -184,17 +216,14 @@ These are located in the langchainjs/packages folder
 - langchainjs/langchain-core
 - langchainjs/libs/langchain-openai
 
-In order to link the @langchain/core module, you will need to run the following command : 
+In order to link the @langchain/core module, you will need to run the following commands : 
 
 ```
+pnpm link --global langchain
 pnpm link --global @langchain/core
+pnpm link --global @langchain/openai
 ```
 
-clone the sources somewhere on your filesystem
-In the sources folder : 
-
-- use pnpm build to build the project
-- use pnpm link --global to link the project globally
 
 ## Link the sources to your project folder
 
@@ -214,21 +243,55 @@ Click `Command` + `,` and go to the Directories section and add a content root
 
 ![img.png](docs/img_6.png)
 
-Folder structure
-![img.png](docs/img.png)
+## Notes
 
-Add a breakpoint 
-![img_1.png](docs/img_1.png)
+### pnpm unlink vs pnpm remove
 
-breakpoint hit
-![img_2.png](docs/img_2.png)
+You can look at the modules that are linked globally with the following command :
+```
+ls -ltr ~/Library/pnpm/global/5/node_modules
+total 0
+lrwxr-xr-x  1 davydewaele  staff   59 Nov 30 16:37 langchain -> ../../../../../../../private/tmp/langchainjs/libs/langchain
+drwxr-xr-x  4 davydewaele  staff  128 Dec  5 08:47 @langchain
+```
 
-Stack trace
-![img_3.png](docs/img_3.png)
+or 
 
+```
+ls -ltr ~/Library/pnpm/global/5/node_modules/@langchain/
+total 0
+lrwxr-xr-x  1 davydewaele  staff  80 Dec  2 16:59 openai -> ../../../../../../Projects/AgenticAI/langchainjs/libs/providers/langchain-openai
+lrwxr-xr-x  1 davydewaele  staff  68 Dec  5 08:47 core -> ../../../../../../Projects/AgenticAI/langchainjs/libs/langchain-core
+```
+
+this means that there are 3 modules linked globally :
+
+- langchain
+- @langchain/core
+- @langchain/openai
+
+If you want to remove a module,
+
+```
+pnpm remove langchain -g
+pnpm remove @langchain/core -g
+pnpm remove @langchain/openai -g
+```
+
+Verify everything is removed
+
+```
+base ❯ ls -l ~/Library/pnpm/global/5/node_modules/
+total 0
+```
+
+
+### View all frames
 
 View all frames
 
 ![img_4.png](docs/img_4.png)
+
+View all frames
 
 ![img_5.png](docs/img_5.png)
